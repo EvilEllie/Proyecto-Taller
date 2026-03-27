@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+{% block title %}Dashboard – Inventario Taller{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+
+{% block content %}
+
+<!-- TARJETAS RESUMEN -->
+<div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:16px; margin-bottom:28px;">
+
+  <div class="card" style="border-top:3px solid var(--rojo);">
+    <div style="font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--gris-claro);margin-bottom:10px;">Total de Piezas</div>
+    <div style="font-family:'Bebas Neue',sans-serif;font-size:48px;color:var(--blanco);line-height:1;">{{ total_piezas }}</div>
+    <div style="font-size:12px;color:var(--gris-claro);margin-top:6px;">piezas registradas en inventario</div>
+  </div>
+
+  <div class="card" style="border-top:3px solid var(--amarillo);">
+    <div style="font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--gris-claro);margin-bottom:10px;">Stock Bajo</div>
+    <div style="font-family:'Bebas Neue',sans-serif;font-size:48px;color:{% if stock_bajo > 0 %}var(--amarillo){% else %}var(--verde){% endif %};line-height:1;">{{ stock_bajo }}</div>
+    <div style="font-size:12px;color:var(--gris-claro);margin-top:6px;">piezas con 5 o menos unidades</div>
+  </div>
+
+  <div class="card" style="border-top:3px solid #3498db;">
+    <div style="font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--gris-claro);margin-bottom:10px;">Movimientos</div>
+    <div style="font-family:'Bebas Neue',sans-serif;font-size:48px;color:#7ec8f5;line-height:1;">{{ total_movimientos }}</div>
+    <div style="font-size:12px;color:var(--gris-claro);margin-top:6px;">entradas y salidas registradas</div>
+  </div>
+
+</div>
+
+<!-- FILA INFERIOR -->
+<div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+
+  <!-- Alertas stock bajo -->
+  <div class="card">
+    <div class="card-title">⚠ Alertas de Stock Bajo</div>
+    {% if alertas %}
+      <table>
+        <thead>
+          <tr>
+            <th>Pieza</th>
+            <th>Cantidad</th>
+            <th>Estado</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for a in alertas %}
+          <tr>
+            <td>{{ a.nombre_pieza }}</td>
+            <td>{{ a.cantidad }}</td>
+            <td><span class="badge badge-danger">{{ a.estado }}</span></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      <div style="text-align:center;padding:32px 0;color:var(--gris-claro);">
+        <div style="font-size:32px;margin-bottom:8px;">✅</div>
+        <div style="font-size:13px;">Todo el inventario tiene stock suficiente</div>
+      </div>
+    {% endif %}
+  </div>
+
+  <!-- Últimos movimientos -->
+  <div class="card">
+    <div class="card-title">🔄 Últimos Movimientos</div>
+    {% if ultimos_movimientos %}
+      <table>
+        <thead>
+          <tr>
+            <th>Pieza</th>
+            <th>Tipo</th>
+            <th>Cantidad</th>
+            <th>Fecha</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for m in ultimos_movimientos %}
+          <tr>
+            <td>{{ m.nombre_pieza }}</td>
+            <td>
+              {% if m.tipo_movimiento == 'ENTRADA' %}
+                <span class="badge badge-success">ENTRADA</span>
+              {% else %}
+                <span class="badge badge-danger">SALIDA</span>
+              {% endif %}
+            </td>
+            <td>{{ m.cantidad }}</td>
+            <td style="color:var(--gris-claro);font-size:12px;">
+              {{ m.fecha.strftime('%d/%m/%Y %H:%M') if m.fecha else '—' }}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      <div style="text-align:center;padding:32px 0;color:var(--gris-claro);">
+        <div style="font-size:13px;">No hay movimientos registrados aún</div>
+      </div>
+    {% endif %}
+  </div>
+
+</div>
+
+<!-- Accesos rápidos -->
+<div style="display:flex;gap:12px;margin-top:16px;">
+  <a href="/inventario" class="btn btn-primary">📦 Ver Inventario</a>
+  <a href="/movimientos" class="btn btn-secondary">🔄 Registrar Movimiento</a>
+  {% if session.get('rol') == 'Administrador' %}
+  <a href="/usuarios" class="btn btn-secondary">👥 Gestionar Usuarios</a>
+  {% endif %}
+</div>
+
+{% endblock %}

@@ -1,0 +1,134 @@
+{% extends "base.html" %}
+{% block title %}Movimientos – Taller{% endblock %}
+{% block page_title %}Movimientos de Inventario{% endblock %}
+
+{% block content %}
+
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+  <div style="font-size:13px;color:var(--gris-claro);">
+    Total: <strong style="color:var(--blanco);">{{ movimientos|length }} movimientos</strong> registrados
+  </div>
+  <button class="btn btn-primary" onclick="abrirModal('modal-movimiento')">
+    + Registrar Movimiento
+  </button>
+</div>
+
+<!-- FILTROS -->
+<div style="display:flex;gap:10px;margin-bottom:20px;">
+  <button class="btn btn-secondary btn-sm" onclick="filtrarTipo('TODOS')">Todos</button>
+  <button class="btn btn-secondary btn-sm" onclick="filtrarTipo('ENTRADA')">
+    <span class="badge badge-success">ENTRADA</span>
+  </button>
+  <button class="btn btn-secondary btn-sm" onclick="filtrarTipo('SALIDA')">
+    <span class="badge badge-danger">SALIDA</span>
+  </button>
+</div>
+
+<!-- TABLA -->
+<div class="card">
+  <div class="card-title">🔄 Historial de Movimientos</div>
+  <table id="tabla-movimientos">
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Pieza</th>
+        <th>Tipo</th>
+        <th>Cantidad</th>
+        <th>Fecha y Hora</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for m in movimientos %}
+      <tr data-tipo="{{ m.tipo_movimiento }}">
+        <td style="color:var(--gris-claro);">{{ m.id_movimiento }}</td>
+        <td><strong style="color:var(--blanco);">{{ m.nombre_pieza }}</strong></td>
+        <td>
+          {% if m.tipo_movimiento == 'ENTRADA' %}
+            <span class="badge badge-success">▲ ENTRADA</span>
+          {% else %}
+            <span class="badge badge-danger">▼ SALIDA</span>
+          {% endif %}
+        </td>
+        <td>
+          <strong style="font-size:15px;color:{% if m.tipo_movimiento == 'ENTRADA' %}var(--verde){% else %}var(--rojo){% endif %};">
+            {% if m.tipo_movimiento == 'ENTRADA' %}+{% else %}-{% endif %}{{ m.cantidad }}
+          </strong>
+        </td>
+        <td style="color:var(--gris-claro);font-size:12px;">
+          {{ m.fecha.strftime('%d/%m/%Y %H:%M:%S') if m.fecha else '—' }}
+        </td>
+      </tr>
+      {% endfor %}
+
+      {% if movimientos|length == 0 %}
+      <tr>
+        <td colspan="5" style="text-align:center;padding:40px;color:var(--gris-claro);">
+          No hay movimientos registrados aún.
+        </td>
+      </tr>
+      {% endif %}
+    </tbody>
+  </table>
+</div>
+
+
+<!-- MODAL REGISTRAR MOVIMIENTO -->
+<div class="modal-overlay" id="modal-movimiento">
+  <div class="modal">
+    <div class="modal-title">🔄 Registrar Movimiento</div>
+    <form method="POST" action="/movimientos/registrar">
+
+      <div class="form-group">
+        <label>Pieza</label>
+        <select name="id_pieza" required>
+          <option value="">Seleccionar pieza...</option>
+          {% for p in piezas %}
+          <option value="{{ p.id_pieza }}">{{ p.nombre_pieza }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>Tipo de Movimiento</label>
+        <select name="tipo_movimiento" required>
+          <option value="">Seleccionar...</option>
+          <option value="ENTRADA">▲ ENTRADA — Ingreso de piezas</option>
+          <option value="SALIDA">▼ SALIDA — Uso o venta de piezas</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>Cantidad</label>
+        <input type="number" name="cantidad" placeholder="0" min="1" required>
+      </div>
+
+      <div style="background:rgba(192,57,43,0.08);border:1px solid rgba(192,57,43,0.2);
+                  border-radius:3px;padding:12px;margin-bottom:16px;font-size:12px;color:#e88;">
+        ⚠ Al registrar una <strong>SALIDA</strong>, el stock se reducirá automáticamente.<br>
+        Al registrar una <strong>ENTRADA</strong>, el stock aumentará automáticamente.
+      </div>
+
+      <div class="modal-actions">
+        <button type="button" class="btn btn-secondary" onclick="cerrarModal('modal-movimiento')">Cancelar</button>
+        <button type="submit" class="btn btn-primary">Registrar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+  function filtrarTipo(tipo) {
+    const filas = document.querySelectorAll('#tabla-movimientos tbody tr');
+    filas.forEach(fila => {
+      if (tipo === 'TODOS') {
+        fila.style.display = '';
+      } else {
+        fila.style.display = fila.dataset.tipo === tipo ? '' : 'none';
+      }
+    });
+  }
+</script>
+{% endblock %}

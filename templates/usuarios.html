@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+{% block title %}Usuarios – Taller{% endblock %}
+{% block page_title %}Gestión de Usuarios{% endblock %}
+
+{% block content %}
+
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+  <div style="font-size:13px;color:var(--gris-claro);">
+    Total: <strong style="color:var(--blanco);">{{ usuarios|length }} usuarios</strong> registrados
+  </div>
+  <button class="btn btn-primary" onclick="abrirModal('modal-usuario')">
+    + Agregar Usuario
+  </button>
+</div>
+
+<div class="card">
+  <div class="card-title">👥 Usuarios del Sistema</div>
+  <table>
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Usuario</th>
+        <th>Rol</th>
+        <th>Acciones</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for u in usuarios %}
+      <tr>
+        <td style="color:var(--gris-claro);">{{ u.id_usuario }}</td>
+        <td>
+          <strong style="color:var(--blanco);">{{ u.usuario }}</strong>
+          {% if u.id_usuario == session.get('id_usuario') %}
+            <span style="font-size:10px;color:var(--gris-claro);margin-left:6px;">(tú)</span>
+          {% endif %}
+        </td>
+        <td>
+          {% if u.rol == 'Administrador' %}
+            <span class="badge badge-danger">👑 Administrador</span>
+          {% else %}
+            <span class="badge badge-info">👤 Empleado</span>
+          {% endif %}
+        </td>
+        <td>
+          {% if u.id_usuario != session.get('id_usuario') %}
+          <form method="POST" action="/usuarios/eliminar/{{ u.id_usuario }}"
+            onsubmit="return confirm('¿Eliminar al usuario {{ u.usuario }}?')">
+            <button type="submit" class="btn btn-danger btn-sm">🗑 Eliminar</button>
+          </form>
+          {% else %}
+            <span style="font-size:12px;color:var(--gris-claro);">— sesión activa</span>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+
+<!-- MODAL AGREGAR USUARIO -->
+<div class="modal-overlay" id="modal-usuario">
+  <div class="modal">
+    <div class="modal-title">👤 Nuevo Usuario</div>
+    <form method="POST" action="/usuarios/agregar">
+      <div class="form-group">
+        <label>Nombre de Usuario</label>
+        <input type="text" name="usuario" placeholder="Ej: empleado2" required>
+      </div>
+      <div class="form-group">
+        <label>Contraseña</label>
+        <input type="password" name="contrasena" placeholder="••••••••" required>
+      </div>
+      <div class="form-group">
+        <label>Rol</label>
+        <select name="rol" required>
+          <option value="">Seleccionar rol...</option>
+          <option value="Administrador">👑 Administrador</option>
+          <option value="Empleado">👤 Empleado</option>
+        </select>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-secondary" onclick="cerrarModal('modal-usuario')">Cancelar</button>
+        <button type="submit" class="btn btn-primary">Crear Usuario</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% endblock %}

@@ -1,0 +1,218 @@
+{% extends "base.html" %}
+{% block title %}Inventario – Taller{% endblock %}
+{% block page_title %}Inventario de Piezas{% endblock %}
+
+{% block content %}
+
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+  <div style="font-size:13px;color:var(--gris-claro);">
+    Total: <strong style="color:var(--blanco);">{{ piezas|length }} piezas</strong> registradas
+  </div>
+  {% if session.get('rol') == 'Administrador' %}
+  <button class="btn btn-primary" onclick="abrirModal('modal-agregar')">
+    + Agregar Pieza
+  </button>
+  {% endif %}
+</div>
+
+<!-- TABLA INVENTARIO -->
+<div class="card">
+  <div class="card-title">📦 Piezas en Inventario</div>
+
+  <!-- Buscador -->
+  <div style="margin-bottom:16px;">
+    <input type="text" id="buscador" placeholder="🔍  Buscar pieza por nombre..."
+      style="width:100%;background:var(--gris-medio);border:1px solid var(--gris-borde);
+             border-radius:3px;padding:10px 14px;color:var(--blanco);
+             font-family:'DM Sans',sans-serif;font-size:13px;outline:none;">
+  </div>
+
+  <table id="tabla-piezas">
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Nombre</th>
+        <th>Año</th>
+        <th>Categoría</th>
+        <th>Tipo</th>
+        <th>Cantidad</th>
+        <th>Estado</th>
+        <th>Descripción</th>
+        {% if session.get('rol') == 'Administrador' %}
+        <th>Acciones</th>
+        {% endif %}
+      </tr>
+    </thead>
+    <tbody>
+      {% for p in piezas %}
+      <tr>
+        <td style="color:var(--gris-claro);">{{ p.id_pieza }}</td>
+        <td><strong style="color:var(--blanco);">{{ p.nombre_pieza }}</strong></td>
+        <td>{{ p.año }}</td>
+        <td><span class="badge badge-info">{{ p.nombre_categoria }}</span></td>
+        <td>{{ p.nombre_tipo }}</td>
+        <td>
+          <strong style="font-size:15px;color:{% if p.cantidad <= 5 %}var(--amarillo){% else %}var(--verde){% endif %};">
+            {{ p.cantidad }}
+          </strong>
+        </td>
+        <td>
+          {% if p.estado_stock == 'STOCK BAJO' %}
+            <span class="badge badge-danger">⚠ STOCK BAJO</span>
+          {% else %}
+            <span class="badge badge-success">✓ NORMAL</span>
+          {% endif %}
+        </td>
+        <td style="color:var(--gris-claro);font-size:12px;max-width:180px;">{{ p.descripcion }}</td>
+        {% if session.get('rol') == 'Administrador' %}
+        <td>
+          <div style="display:flex;gap:6px;">
+            <button class="btn btn-secondary btn-sm"
+              onclick="abrirEditar({{ p.id_pieza }}, '{{ p.nombre_pieza }}', {{ p.año }}, '{{ p.descripcion }}', {{ p.id_categoria }}, {{ p.id_tipo }})">
+              ✏ Editar
+            </button>
+            <form method="POST" action="/inventario/eliminar/{{ p.id_pieza }}"
+              onsubmit="return confirm('¿Eliminar esta pieza?')">
+              <button type="submit" class="btn btn-danger btn-sm">🗑</button>
+            </form>
+          </div>
+        </td>
+        {% endif %}
+      </tr>
+      {% endfor %}
+
+      {% if piezas|length == 0 %}
+      <tr>
+        <td colspan="9" style="text-align:center;padding:40px;color:var(--gris-claro);">
+          No hay piezas registradas aún.
+        </td>
+      </tr>
+      {% endif %}
+    </tbody>
+  </table>
+</div>
+
+
+<!-- MODAL AGREGAR -->
+<div class="modal-overlay" id="modal-agregar">
+  <div class="modal">
+    <div class="modal-title">+ Agregar Nueva Pieza</div>
+    <form method="POST" action="/inventario/agregar">
+      <div class="form-group">
+        <label>Nombre de la Pieza</label>
+        <input type="text" name="nombre_pieza" placeholder="Ej: Motor Chevrolet 2.4L" required>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Año</label>
+          <input type="number" name="año" placeholder="2020" min="1900" max="2030" required>
+        </div>
+        <div class="form-group">
+          <label>Cantidad Inicial</label>
+          <input type="number" name="cantidad" placeholder="0" min="0" required>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Categoría</label>
+          <select name="id_categoria" required>
+            <option value="">Seleccionar...</option>
+            {% for c in categorias %}
+            <option value="{{ c.id_categoria }}">{{ c.nombre_categoria }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Tipo</label>
+          <select name="id_tipo" required>
+            <option value="">Seleccionar...</option>
+            {% for t in tipos %}
+            <option value="{{ t.id_tipo }}">{{ t.nombre_tipo }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Descripción</label>
+        <input type="text" name="descripcion" placeholder="Descripción breve de la pieza">
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-secondary" onclick="cerrarModal('modal-agregar')">Cancelar</button>
+        <button type="submit" class="btn btn-primary">Guardar Pieza</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+
+<!-- MODAL EDITAR -->
+<div class="modal-overlay" id="modal-editar">
+  <div class="modal">
+    <div class="modal-title">✏ Editar Pieza</div>
+    <form method="POST" id="form-editar">
+      <div class="form-group">
+        <label>Nombre de la Pieza</label>
+        <input type="text" name="nombre_pieza" id="edit-nombre" required>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Año</label>
+          <input type="number" name="año" id="edit-año" min="1900" max="2030" required>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Categoría</label>
+          <select name="id_categoria" id="edit-categoria" required>
+            {% for c in categorias %}
+            <option value="{{ c.id_categoria }}">{{ c.nombre_categoria }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Tipo</label>
+          <select name="id_tipo" id="edit-tipo" required>
+            {% for t in tipos %}
+            <option value="{{ t.id_tipo }}">{{ t.nombre_tipo }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Descripción</label>
+        <input type="text" name="descripcion" id="edit-descripcion">
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-secondary" onclick="cerrarModal('modal-editar')">Cancelar</button>
+        <button type="submit" class="btn btn-primary">Guardar Cambios</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+  // Buscador en tiempo real
+  document.getElementById('buscador').addEventListener('input', function() {
+    const filtro = this.value.toLowerCase();
+    const filas = document.querySelectorAll('#tabla-piezas tbody tr');
+    filas.forEach(fila => {
+      const texto = fila.textContent.toLowerCase();
+      fila.style.display = texto.includes(filtro) ? '' : 'none';
+    });
+  });
+
+  // Abrir modal editar con datos precargados
+  function abrirEditar(id, nombre, año, descripcion, categoria, tipo) {
+    document.getElementById('form-editar').action = '/inventario/editar/' + id;
+    document.getElementById('edit-nombre').value = nombre;
+    document.getElementById('edit-año').value = año;
+    document.getElementById('edit-descripcion').value = descripcion;
+    document.getElementById('edit-categoria').value = categoria;
+    document.getElementById('edit-tipo').value = tipo;
+    abrirModal('modal-editar');
+  }
+</script>
+{% endblock %}

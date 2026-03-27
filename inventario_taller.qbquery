@@ -1,0 +1,215 @@
+﻿CREATE DATABASE inventario_taller;
+
+USE inventario_taller;
+
+SHOW TABLES;
+
+# TABLAS
+
+CREATE TABLE usuarios(
+id_usuario INT AUTO_INCREMENT,
+usuario VARCHAR(30),
+contrasena VARCHAR(30),
+rol VARCHAR(20),
+PRIMARY KEY(id_usuario)
+);
+
+CREATE TABLE categorias(
+id_categoria INT AUTO_INCREMENT,
+nombre_categoria VARCHAR(50),
+PRIMARY KEY(id_categoria)
+);
+
+CREATE TABLE tipo(
+id_tipo INT AUTO_INCREMENT,
+nombre_tipo VARCHAR(50),
+PRIMARY KEY(id_tipo)
+);
+
+CREATE TABLE piezas(
+id_pieza INT AUTO_INCREMENT,
+nombre_pieza VARCHAR(50),
+año INT,
+cantidad INT,
+descripcion VARCHAR(100),
+id_categoria INT,
+id_tipo INT,
+PRIMARY KEY(id_pieza),
+FOREIGN KEY(id_categoria) REFERENCES categorias(id_categoria),
+FOREIGN KEY(id_tipo) REFERENCES tipo(id_tipo)
+);
+
+CREATE TABLE movimientos(
+id_movimiento INT AUTO_INCREMENT,
+id_pieza INT,
+tipo_movimiento VARCHAR(20),
+cantidad INT,
+fecha DATETIME,
+PRIMARY KEY(id_movimiento),
+FOREIGN KEY(id_pieza) REFERENCES piezas(id_pieza)
+);
+
+DESCRIBE usuarios;
+DESCRIBE categorias;
+DESCRIBE tipo;
+DESCRIBE piezas;
+DESCRIBE movimientos;
+
+
+# PROCEDIMIENTOS
+
+
+DELIMITER //
+CREATE PROCEDURE insertar_usuario(
+IN usu VARCHAR(30),
+IN passw VARCHAR(30),
+IN r VARCHAR(20))
+BEGIN
+INSERT INTO usuarios(usuario,contrasena,rol)
+VALUES(usu,passw,r);
+END//
+DELIMITER ;
+
+DELIMITER //
+CREATE PROCEDURE insertar_pieza(
+IN nom VARCHAR(50),
+IN anio INT,
+IN cant INT,
+IN des VARCHAR(100),
+IN cat INT,
+IN tip INT
+)
+BEGIN
+INSERT INTO piezas(nombre_pieza,año,cantidad,descripcion,id_categoria,id_tipo)
+VALUES(nom,anio,cant,des,cat,tip);
+END//
+DELIMITER ;
+
+
+
+# FUNCION
+
+
+DELIMITER //
+CREATE FUNCTION stock_bajo(cant INT)
+RETURNS VARCHAR(20)
+DETERMINISTIC
+BEGIN
+  DECLARE estado VARCHAR(20);
+  IF cant <= 5 THEN
+    SET estado = 'STOCK BAJO';
+  ELSE
+    SET estado = 'STOCK NORMAL';
+  END IF;
+  RETURN estado;
+END//
+DELIMITER ;
+
+
+# TRIGGER
+
+
+DELIMITER //
+CREATE TRIGGER actualizar_stock
+AFTER INSERT ON movimientos
+FOR EACH ROW
+BEGIN
+  IF NEW.tipo_movimiento = 'ENTRADA' THEN
+    UPDATE piezas
+    SET cantidad = cantidad + NEW.cantidad
+    WHERE id_pieza = NEW.id_pieza;
+  END IF;
+
+  IF NEW.tipo_movimiento = 'SALIDA' THEN
+    UPDATE piezas
+    SET cantidad = cantidad - NEW.cantidad
+    WHERE id_pieza = NEW.id_pieza;
+  END IF;
+END//
+DELIMITER ;
+
+
+# INSERTAR DATOS
+
+
+#USUARIOS
+CALL insertar_usuario('Miguel','admin123','Administrador');
+CALL insertar_usuario('empleado1','1234','Empleado');
+
+SELECT * FROM usuarios;
+
+#CATEGORIAS
+INSERT INTO categorias(nombre_categoria) VALUES ('Motor');
+INSERT INTO categorias(nombre_categoria) VALUES ('Monoblocks');
+INSERT INTO categorias(nombre_categoria) VALUES ('Cabezas');
+INSERT INTO categorias(nombre_categoria) VALUES ('Bielas');
+INSERT INTO categorias(nombre_categoria) VALUES ('Pistones');
+INSERT INTO categorias(nombre_categoria) VALUES ('Cigüeñales');
+INSERT INTO categorias(nombre_categoria) VALUES ('Valvulas');
+INSERT INTO categorias(nombre_categoria) VALUES ('Arbol de levas');
+INSERT INTO categorias(nombre_categoria) VALUES ('Bomba de aceite');
+INSERT INTO categorias(nombre_categoria) VALUES ('Bomba de agua');
+INSERT INTO categorias(nombre_categoria) VALUES ('Metales de biela');
+INSERT INTO categorias(nombre_categoria) VALUES ('Metales de centro');
+INSERT INTO categorias(nombre_categoria) VALUES ('Kit de distribucion');
+
+#TIPOS
+
+INSERT INTO tipo(nombre_tipo) VALUES ('Carburado');
+INSERT INTO tipo(nombre_tipo) VALUES ('TBI');
+INSERT INTO tipo(nombre_tipo) VALUES ('FI');
+
+
+SELECT * FROM categorias;
+
+#PIEZAS EJEMPLO
+CALL insertar_pieza('Motor Chevrolet Ecotec 2.4L','2016',2,'Motor 4 cilindros Ecotec Chevrolet',1,1);
+
+SELECT * FROM piezas;
+
+#MOVIMIENTOS EJEMPLO
+INSERT INTO movimientos(id_pieza,tipo_movimiento,cantidad,fecha)
+VALUES (3,'SALIDA',2,NOW());
+
+INSERT INTO movimientos(id_pieza,tipo_movimiento,cantidad,fecha)
+VALUES (3,'ENTRADA',5,NOW());
+
+SELECT * FROM movimientos;
+
+
+# CONSULTAS
+
+
+#Consulta inventario con estado de stock
+SELECT nombre_pieza,
+año,
+cantidad,
+stock_bajo(cantidad) AS estado_stock
+FROM piezas;
+
+#Piezas con stock bajo
+SELECT nombre_pieza, cantidad
+FROM piezas
+WHERE cantidad <= 5;
+
+
+# USUARIOS Y PRIVILEGIOS
+
+
+CREATE USER 'usuario_empleado'@'localhost' IDENTIFIED BY '1234';
+GRANT SELECT, INSERT ON inventario_taller.* TO 'usuario_empleado'@'localhost';
+
+CREATE USER 'Miguel'@'localhost' IDENTIFIED BY 'admin123';
+GRANT ALL PRIVILEGES ON inventario_taller.* TO 'Miguel'@'localhost';
+
+SHOW GRANTS FOR 'usuario_empleado'@'localhost';
+SHOW GRANTS FOR 'Miguel'@'localhost';
+
+
+# RESPALDO Y RECUPERACION
+
+-- RESPALDO
+-- mysqldump -u root -p inventario_taller > inventario_taller.sql
+
+-- RECUPERACION
+-- mysql -u root -p inventario_taller < inventario_taller.sql
