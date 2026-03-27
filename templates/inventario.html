@@ -190,6 +190,59 @@
   </div>
 </div>
 
+
+<!-- SECCIÓN CATEGORÍAS (solo admin) -->
+{% if session.get('rol') == 'Administrador' %}
+<div class="card" style="margin-top:20px;">
+  <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;">
+    <span>🏷 Gestión de Categorías</span>
+    <button class="btn btn-primary btn-sm" onclick="abrirModal('modal-categoria')">+ Nueva Categoría</button>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Nombre de Categoría</th>
+        <th>Acciones</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for c in categorias %}
+      <tr>
+        <td style="color:var(--gris-claro);">{{ c.id_categoria }}</td>
+        <td><span class="badge badge-info">{{ c.nombre_categoria }}</span></td>
+        <td>
+          <form method="POST" action="/categorias/eliminar/{{ c.id_categoria }}"
+            onsubmit="return confirm('¿Eliminar la categoría {{ c.nombre_categoria }}?')">
+            <button type="submit" class="btn btn-danger btn-sm">🗑 Eliminar</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+
+<!-- MODAL AGREGAR CATEGORÍA -->
+<div class="modal-overlay" id="modal-categoria">
+  <div class="modal">
+    <div class="modal-title">🏷 Nueva Categoría</div>
+    <form method="POST" action="/categorias/agregar">
+      <div class="form-group">
+        <label>Nombre de la Categoría</label>
+        <input type="text" name="nombre_categoria" placeholder="Ej: Turbocompresor" required>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-secondary" onclick="cerrarModal('modal-categoria')">Cancelar</button>
+        <button type="submit" class="btn btn-primary">Guardar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+
 {% endblock %}
 
 {% block scripts %}
