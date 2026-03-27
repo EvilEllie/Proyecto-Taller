@@ -307,7 +307,7 @@ def eliminar_usuario(id):
 
 
 # ─────────────────────────────────────────
-# CATEGORIAS Y TIPOS (API JSON para modales)
+# CATEGORIAS Y TIPOS
 # ─────────────────────────────────────────
 @app.route('/api/categorias')
 @login_required
@@ -317,8 +317,39 @@ def api_categorias():
     cur.execute("SELECT * FROM categorias")
     data = cur.fetchall()
     cur.close()
+    con.close()
     return jsonify(data)
 
+@app.route('/categorias/agregar', methods=['POST'])
+@admin_required
+def agregar_categoria():
+    nombre = request.form['nombre_categoria']
+    con = get_db()
+    cur = con.cursor()
+    cur.execute("INSERT INTO categorias(nombre_categoria) VALUES(%s)", (nombre,))
+    con.commit()
+    cur.close()
+    con.close()
+    flash('Categoría agregada correctamente.', 'success')
+    return redirect(url_for('inventario'))
+
+@app.route('/categorias/eliminar/<int:id>', methods=['POST'])
+@admin_required
+def eliminar_categoria(id):
+    con = get_db()
+    cur = con.cursor()
+    # Verificar que no haya piezas usando esta categoría
+    cur.execute("SELECT COUNT(*) AS total FROM piezas WHERE id_categoria = %s", (id,))
+    resultado = cur.fetchone()
+    if resultado['total'] > 0:
+        flash('No puedes eliminar una categoría que tiene piezas asignadas.', 'error')
+    else:
+        cur.execute("DELETE FROM categorias WHERE id_categoria = %s", (id,))
+        con.commit()
+        flash('Categoría eliminada.', 'success')
+    cur.close()
+    con.close()
+    return redirect(url_for('inventario'))
 
 # ─────────────────────────────────────────
 # ARRANCAR
