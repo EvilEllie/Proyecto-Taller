@@ -95,7 +95,8 @@ def dashboard():
     total_movimientos = cur.fetchone()['total']
     
     cur.execute("""
-        SELECT p.nombre_pieza, p.cantidad, stock_bajo(p.cantidad) AS estado
+        SELECT p.nombre_pieza, p.cantidad,
+        CASE WHEN p.cantidad <= 5 THEN 'STOCK BAJO' ELSE 'STOCK NORMAL' END AS estado
         FROM piezas p
         WHERE p.cantidad <= 5
         ORDER BY p.cantidad ASC
@@ -116,7 +117,7 @@ def dashboard():
     
     return render_template('dashboard.html',
         total_piezas=total_piezas,
-        stock_bajo=stock_bajo,
+        CASE WHEN p.cantidad <= 5 THEN 'STOCK BAJO' ELSE 'STOCK NORMAL' END AS estado_stock
         total_movimientos=total_movimientos,
         alertas=alertas,
         ultimos_movimientos=ultimos_movimientos
