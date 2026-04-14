@@ -115,14 +115,13 @@ def dashboard():
     
     cur.close()
     
-    return render_template('dashboard.html',
+return render_template('dashboard.html',
         total_piezas=total_piezas,
-        CASE WHEN p.cantidad <= 5 THEN 'STOCK BAJO' ELSE 'STOCK NORMAL' END AS estado_stock
+        stock_bajo=stock_bajo,
         total_movimientos=total_movimientos,
         alertas=alertas,
         ultimos_movimientos=ultimos_movimientos
     )
-
 
 # ─────────────────────────────────────────
 # INVENTARIO
