@@ -115,7 +115,7 @@ def dashboard():
     
     cur.close()
     
-return render_template('dashboard.html',
+    return render_template('dashboard.html',
         total_piezas=total_piezas,
         stock_bajo=stock_bajo,
         total_movimientos=total_movimientos,
