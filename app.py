@@ -169,6 +169,11 @@ def agregar_pieza():
     
     con = get_db()
     cur = con.cursor()
+    cur.execute("SELECT COUNT(*) AS total FROM piezas WHERE nombre_pieza = %s AND año = %s", (nombre, anio))
+    if cur.fetchone()['total'] > 0:
+        flash('Ya existe una pieza con ese nombre y año.', 'error')
+        cur.close()
+        return redirect(url_for('inventario'))
     cur.execute("INSERT INTO piezas(nombre_pieza, año, cantidad, descripcion, id_categoria, id_tipo) VALUES (%s, %s, %s, %s, %s, %s)", (nombre, anio, cantidad, descripcion, categoria, tipo))
     con.commit()
     cur.close()
@@ -240,6 +245,7 @@ def registrar_movimiento():
     id_pieza = request.form['id_pieza']
     tipo = request.form['tipo_movimiento']
     cantidad = request.form['cantidad']
+    proveedor = request.form['proveedor']
     
     con = get_db()
     cur = con.cursor()
@@ -253,9 +259,9 @@ def registrar_movimiento():
             return redirect(url_for('movimientos'))
     
     cur.execute("""
-        INSERT INTO movimientos (id_pieza, tipo_movimiento, cantidad, fecha)
-        VALUES (%s, %s, %s, NOW())
-    """, (id_pieza, tipo, cantidad))
+        INSERT INTO movimientos (id_pieza, tipo_movimiento, cantidad, fecha, proveedor)
+        VALUES (%s, %s, %s, NOW(), %s)
+    """, (id_pieza, tipo, cantidad, proveedor))
 
     if tipo == 'ENTRADA':
         cur.execute("UPDATE piezas SET cantidad = cantidad + %s WHERE id_pieza = %s", (cantidad, id_pieza))
@@ -337,6 +343,11 @@ def agregar_categoria():
     nombre = request.form['nombre_categoria']
     con = get_db()
     cur = con.cursor()
+    cur.execute("SELECT COUNT(*) AS total FROM categorias WHERE nombre_categoria = %s", (nombre,))
+    if cur.fetchone()['total'] > 0:
+        flash('Ya existe esa categoría.', 'error')
+        cur.close()
+        return redirect(url_for('inventario'))
     cur.execute("INSERT INTO categorias(nombre_categoria) VALUES(%s)", (nombre,))
     con.commit()
     cur.close()

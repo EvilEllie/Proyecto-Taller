@@ -372,7 +372,7 @@
     <a href="/movimientos" class="nav-link {% if request.path == '/movimientos' %}active{% endif %}">
       <span class="icon">🔄</span> Movimientos
     </a>
-    <a href="/reporte/inventario" class="nav-link" target="_blank">
+    <a href="/reporte/inventario" class="nav-link" target="_blank" onclick="return confirm('¿Deseas generar el reporte PDF?')">
       <span class="icon">📄</span> Reporte PDF
     </a>
     {% if session.get('rol') == 'Administrador' %}
