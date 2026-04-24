@@ -209,12 +209,17 @@ def editar_pieza(id):
 def eliminar_pieza(id):
     con = get_db()
     cur = con.cursor()
-    cur.execute("DELETE FROM piezas WHERE id_pieza = %s", (id,))
-    con.commit()
+    cur.execute("SELECT COUNT(*) AS total FROM movimientos WHERE id_pieza = %s", (id,))
+    resultado = cur.fetchone()
+    if resultado['total'] > 0:
+        flash('No puedes eliminar una pieza que tiene movimientos registrados.', 'error')
+    else:
+        cur.execute("DELETE FROM piezas WHERE id_pieza = %s", (id,))
+        con.commit()
+        flash('Pieza eliminada.', 'success')
     cur.close()
-    flash('Pieza eliminada.', 'success')
+    con.close()
     return redirect(url_for('inventario'))
-
 
 # ─────────────────────────────────────────
 # MOVIMIENTOS
