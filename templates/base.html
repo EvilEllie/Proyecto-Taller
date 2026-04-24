@@ -351,9 +351,70 @@
       justify-content: flex-end;
       margin-top: 24px;
     }
+
+    /* ── RESPONSIVE MÓVIL ── */
+    .menu-toggle {
+      display: none;
+      position: fixed;
+      top: 15px;
+      left: 15px;
+      z-index: 200;
+      background: var(--rojo);
+      border: none;
+      color: white;
+      font-size: 20px;
+      padding: 8px 12px;
+      border-radius: 3px;
+      cursor: pointer;
+    }
+
+    @media (max-width: 768px) {
+      .menu-toggle { display: block; }
+
+      .sidebar {
+        transform: translateX(-220px);
+        transition: transform 0.3s ease;
+      }
+
+      .sidebar.open {
+        transform: translateX(0);
+      }
+
+      .main {
+        margin-left: 0;
+      }
+
+      .topbar {
+        padding: 15px;
+        padding-left: 60px;
+      }
+
+      .content {
+        padding: 15px;
+      }
+
+      .form-row {
+        grid-template-columns: 1fr;
+      }
+
+      table {
+        font-size: 11px;
+      }
+
+      thead th, tbody td {
+        padding: 8px 6px;
+      }
+
+      .modal {
+        width: 95vw;
+        padding: 20px;
+      }
+    }
+
   </style>
 </head>
 <body>
+<button class="menu-toggle" onclick="toggleMenu()">☰</button>
 
 <aside class="sidebar">
   <div class="sidebar-brand">
@@ -433,6 +494,19 @@
     overlay.addEventListener('click', function(e) {
       if (e.target === this) this.classList.remove('open');
     });
+  });
+
+  function toggleMenu() {
+    document.querySelector('.sidebar').classList.toggle('open');
+  }
+
+  // Cerrar sidebar al hacer clic fuera en móvil
+  document.addEventListener('click', function(e) {
+    const sidebar = document.querySelector('.sidebar');
+    const toggle = document.querySelector('.menu-toggle');
+    if (window.innerWidth <= 768 && !sidebar.contains(e.target) && !toggle.contains(e.target)) {
+      sidebar.classList.remove('open');
+    }
   });
 </script>
 
