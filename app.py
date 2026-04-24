@@ -5,6 +5,11 @@ import pymysql
 import pymysql.cursors
 from config import Config
 from functools import wraps
+from reportlab.lib.pagesizes import letter
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.lib import colors
+from io import BytesIO
 
 app = Flask(__name__)
 app.config.from_object(Config)
