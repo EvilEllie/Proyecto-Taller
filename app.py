@@ -251,6 +251,12 @@ def registrar_movimiento():
         INSERT INTO movimientos (id_pieza, tipo_movimiento, cantidad, fecha)
         VALUES (%s, %s, %s, NOW())
     """, (id_pieza, tipo, cantidad))
+
+    if tipo == 'ENTRADA':
+        cur.execute("UPDATE piezas SET cantidad = cantidad + %s WHERE id_pieza = %s", (cantidad, id_pieza))
+    elif tipo == 'SALIDA':
+        cur.execute("UPDATE piezas SET cantidad = cantidad - %s WHERE id_pieza = %s", (cantidad, id_pieza))
+
     con.commit()
     cur.close()
     
