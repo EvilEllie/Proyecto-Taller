@@ -190,7 +190,6 @@
   </div>
 </div>
 
-
 <!-- SECCIÓN CATEGORÍAS (solo admin) -->
 {% if session.get('rol') == 'Administrador' %}
 <div class="card" style="margin-top:20px;">
@@ -224,6 +223,57 @@
   </table>
 </div>
 {% endif %}
+
+<!-- SECCIÓN TIPOS (solo admin) -->
+{% if session.get('rol') == 'Administrador' %}
+<div class="card" style="margin-top:20px;">
+  <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;">
+    <span>⚙ Gestión de Tipos</span>
+    <button class="btn btn-primary btn-sm" onclick="abrirModal('modal-tipo')">+ Nuevo Tipo</button>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Nombre del Tipo</th>
+        <th>Acciones</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for t in tipos %}
+      <tr>
+        <td style="color:var(--gris-claro);">{{ t.id_tipo }}</td>
+        <td>{{ t.nombre_tipo }}</td>
+        <td>
+          <form method="POST" action="/tipos/eliminar/{{ t.id_tipo }}"
+            onsubmit="return confirm('¿Eliminar el tipo {{ t.nombre_tipo }}?')">
+            <button type="submit" class="btn btn-danger btn-sm">🗑 Eliminar</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+
+<!-- MODAL AGREGAR TIPO -->
+<div class="modal-overlay" id="modal-tipo">
+  <div class="modal">
+    <div class="modal-title">⚙ Nuevo Tipo</div>
+    <form method="POST" action="/tipos/agregar">
+      <div class="form-group">
+        <label>Nombre del Tipo</label>
+        <input type="text" name="nombre_tipo" placeholder="Ej: Híbrido" required>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-secondary" onclick="cerrarModal('modal-tipo')">Cancelar</button>
+        <button type="submit" class="btn btn-primary">Guardar</button>
+      </div>
+    </form>
+  </div>
+</div>
 
 <!-- MODAL AGREGAR CATEGORÍA -->
 <div class="modal-overlay" id="modal-categoria">

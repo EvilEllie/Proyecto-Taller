@@ -381,6 +381,42 @@ def eliminar_categoria(id):
     return redirect(url_for('inventario'))
 
 # ─────────────────────────────────────────
+# TIPOS
+# ─────────────────────────────────────────
+@app.route('/tipos/agregar', methods=['POST'])
+@admin_required
+def agregar_tipo():
+    nombre = request.form['nombre_tipo']
+    con = get_db()
+    cur = con.cursor()
+    cur.execute("SELECT COUNT(*) AS total FROM tipo WHERE nombre_tipo = %s", (nombre,))
+    if cur.fetchone()['total'] > 0:
+        flash('Ya existe ese tipo.', 'error')
+        cur.close()
+        return redirect(url_for('inventario'))
+    cur.execute("INSERT INTO tipo(nombre_tipo) VALUES(%s)", (nombre,))
+    con.commit()
+    cur.close()
+    flash('Tipo agregado correctamente.', 'success')
+    return redirect(url_for('inventario'))
+
+@app.route('/tipos/eliminar/<int:id>', methods=['POST'])
+@admin_required
+def eliminar_tipo(id):
+    con = get_db()
+    cur = con.cursor()
+    cur.execute("SELECT COUNT(*) AS total FROM piezas WHERE id_tipo = %s", (id,))
+    if cur.fetchone()['total'] > 0:
+        flash('No puedes eliminar un tipo que tiene piezas asignadas.', 'error')
+    else:
+        cur.execute("DELETE FROM tipo WHERE id_tipo = %s", (id,))
+        con.commit()
+        flash('Tipo eliminado.', 'success')
+    cur.close()
+    return redirect(url_for('inventario'))
+
+
+# ─────────────────────────────────────────
 # REPORTE PDF
 # ─────────────────────────────────────────
 @app.route('/reporte/inventario')
