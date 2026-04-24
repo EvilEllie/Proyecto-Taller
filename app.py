@@ -363,6 +363,99 @@ def eliminar_categoria(id):
     return redirect(url_for('inventario'))
 
 # ─────────────────────────────────────────
+# REPORTE PDF
+# ─────────────────────────────────────────
+@app.route('/reporte/inventario')
+@login_required
+def reporte_inventario():
+    con = get_db()
+    cur = con.cursor()
+    cur.execute("""
+        SELECT p.nombre_pieza, p.año, p.cantidad, p.descripcion,
+            c.nombre_categoria, t.nombre_tipo,
+            CASE WHEN p.cantidad <= 5 THEN 'STOCK BAJO' ELSE 'STOCK NORMAL' END AS estado
+        FROM piezas p
+        JOIN categorias c ON p.id_categoria = c.id_categoria
+        JOIN tipo t ON p.id_tipo = t.id_tipo
+        ORDER BY p.nombre_pieza ASC
+    """)
+    piezas = cur.fetchall()
+
+    cur.execute("""
+        SELECT m.fecha, m.tipo_movimiento, m.cantidad, m.proveedor, p.nombre_pieza
+        FROM movimientos m
+        JOIN piezas p ON m.id_pieza = p.id_pieza
+        ORDER BY m.fecha DESC
+    """)
+    movimientos = cur.fetchall()
+    cur.close()
+
+    buffer = BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=letter)
+    styles = getSampleStyleSheet()
+    elements = []
+
+    # Título
+    elements.append(Paragraph("Rectificaciones Rio", styles['Title']))
+    elements.append(Paragraph("Reporte de Inventario y Trazabilidad", styles['Heading2']))
+    elements.append(Spacer(1, 20))
+
+    # Tabla inventario
+    elements.append(Paragraph("Inventario de Piezas", styles['Heading3']))
+    elements.append(Spacer(1, 10))
+    data = [['Pieza', 'Año', 'Cantidad', 'Categoría', 'Tipo', 'Estado']]
+    for p in piezas:
+        data.append([p['nombre_pieza'], str(p['año']), str(p['cantidad']),
+                    p['nombre_categoria'], p['nombre_tipo'], p['estado']])
+
+    table = Table(data, repeatRows=1, colWidths=[150, 40, 55, 90, 80, 80])
+    table.setStyle(TableStyle([
+        ('BACKGROUND', (0,0), (-1,0), colors.HexColor('#8B0000')),
+        ('TEXTCOLOR', (0,0), (-1,0), colors.white),
+        ('FONTNAME', (0,0), (-1,0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0,0), (-1,-1), 9),
+        ('ALIGN', (0,0), (-1,-1), 'CENTER'),
+        ('GRID', (0,0), (-1,-1), 0.5, colors.grey),
+        ('ROWBACKGROUNDS', (0,1), (-1,-1), [colors.white, colors.HexColor('#f5f5f5')]),
+    ]))
+    elements.append(table)
+    elements.append(Spacer(1, 30))
+
+    # Tabla movimientos
+    elements.append(Paragraph("Registro de Movimientos y Procedencia", styles['Heading3']))
+    elements.append(Spacer(1, 10))
+    data2 = [['Fecha', 'Pieza', 'Tipo', 'Cantidad', 'Proveedor']]
+    for m in movimientos:
+        data2.append([
+            str(m['fecha']),
+            m['nombre_pieza'],
+            m['tipo_movimiento'],
+            str(m['cantidad']),
+            m['proveedor'] or 'N/A'
+        ])
+
+    table2 = Table(data2, repeatRows=1, colWidths=[110, 130, 60, 60, 130])
+    table2.setStyle(TableStyle([
+        ('BACKGROUND', (0,0), (-1,0), colors.HexColor('#8B0000')),
+        ('TEXTCOLOR', (0,0), (-1,0), colors.white),
+        ('FONTNAME', (0,0), (-1,0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0,0), (-1,-1), 9),
+        ('ALIGN', (0,0), (-1,-1), 'CENTER'),
+        ('GRID', (0,0), (-1,-1), 0.5, colors.grey),
+        ('ROWBACKGROUNDS', (0,1), (-1,-1), [colors.white, colors.HexColor('#f5f5f5')]),
+    ]))
+    elements.append(table2)
+
+    doc.build(elements)
+    buffer.seek(0)
+
+    from flask import make_response
+    response = make_response(buffer.read())
+    response.headers['Content-Type'] = 'application/pdf'
+    response.headers['Content-Disposition'] = 'inline; filename=reporte_inventario.pdf'
+    return response
+
+# ─────────────────────────────────────────
 # ARRANCAR
 # ─────────────────────────────────────────
 if __name__ == '__main__':
