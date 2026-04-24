@@ -68,7 +68,7 @@
         <td>
           <div style="display:flex;gap:6px;">
             <button class="btn btn-secondary btn-sm"
-              onclick="abrirEditar({{ p.id_pieza }}, '{{ p.nombre_pieza }}', {{ p.año }}, '{{ p.descripcion }}', {{ p.id_categoria }}, {{ p.id_tipo }})">
+              onclick="abrirEditar({{ p.id_pieza }}, {{ p.nombre_pieza|tojson }}, {{ p.año }}, {{ p.descripcion|tojson }}, {{ p.id_categoria }}, {{ p.id_tipo }})">
               ✏ Editar
             </button>
             <form method="POST" action="/inventario/eliminar/{{ p.id_pieza }}"
