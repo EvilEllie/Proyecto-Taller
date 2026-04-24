@@ -164,7 +164,7 @@ def agregar_pieza():
     
     con = get_db()
     cur = con.cursor()
-    cur.callproc('insertar_pieza', [nombre, anio, cantidad, descripcion, categoria, tipo])
+    cur.execute("INSERT INTO piezas(nombre_pieza, año, cantidad, descripcion, id_categoria, id_tipo) VALUES (%s, %s, %s, %s, %s, %s)", (nombre, anio, cantidad, descripcion, categoria, tipo))
     con.commit()
     cur.close()
     
@@ -281,7 +281,7 @@ def agregar_usuario():
     
     con = get_db()
     cur = con.cursor()
-    cur.callproc('insertar_usuario', [usuario, contrasena, rol])
+    cur.execute("INSERT INTO usuarios(usuario, contrasena, rol) VALUES (%s, %s, %s)", (usuario, contrasena, rol))
     con.commit()
     cur.close()
     
