@@ -207,16 +207,18 @@ def editar_pieza(id):
 @app.route('/inventario/eliminar/<int:id>', methods=['POST'])
 @admin_required
 def eliminar_pieza(id):
+    forzar = request.form.get('forzar', 'no')
     con = get_db()
     cur = con.cursor()
     cur.execute("SELECT COUNT(*) AS total FROM movimientos WHERE id_pieza = %s", (id,))
     resultado = cur.fetchone()
-    if resultado['total'] > 0:
-        flash('No puedes eliminar una pieza que tiene movimientos registrados.', 'error')
+    if resultado['total'] > 0 and forzar != 'si':
+        flash(f'piezaconmovimientos:{id}', 'error')
     else:
+        cur.execute("DELETE FROM movimientos WHERE id_pieza = %s", (id,))
         cur.execute("DELETE FROM piezas WHERE id_pieza = %s", (id,))
         con.commit()
-        flash('Pieza eliminada.', 'success')
+        flash('Pieza y sus movimientos eliminados.', 'success')
     cur.close()
     con.close()
     return redirect(url_for('inventario'))
