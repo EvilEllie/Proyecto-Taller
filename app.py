@@ -435,6 +435,11 @@ def reporte_inventario():
     """)
     piezas = cur.fetchall()
 
+    if len(piezas) == 0:
+        cur.close()
+        flash('No hay piezas registradas para generar el reporte.', 'error')
+        return redirect(url_for('inventario'))
+
     cur.execute("""
         SELECT m.fecha, m.tipo_movimiento, m.cantidad, m.proveedor, p.nombre_pieza
         FROM movimientos m
