@@ -66,8 +66,8 @@
         <td style="color:var(--gris-claro);font-size:12px;max-width:180px;">{{ p.descripcion }}</td>
         {% if session.get('rol') == 'Administrador' %}
         <td>
-          <div>
-
+          <div style="display:flex;gap:6px;">
+            
             <form method="POST" action="/inventario/eliminar/{{ p.id_pieza }}"
               onsubmit="return confirm('¿Eliminar esta pieza?')">
               <button type="submit" class="btn btn-danger btn-sm">🗑</button>
