@@ -267,5 +267,29 @@
     document.getElementById('edit-tipo').value = tipo;
     abrirModal('modal-editar');
   }
+
+  // Manejar confirmacion de eliminar pieza con movimientos
+    window.onload = function() {
+      const mensajes = document.querySelectorAll('.flash.error');
+      mensajes.forEach(function(msg) {
+        const texto = msg.textContent.trim();
+        if (texto.startsWith('piezaconmovimientos:')) {
+          const idPieza = texto.split(':')[1];
+          msg.style.display = 'none';
+          if (confirm('Esta pieza tiene movimientos registrados. ¿Deseas eliminar la pieza y todos sus movimientos?')) {
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = '/inventario/eliminar/' + idPieza;
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = 'forzar';
+            input.value = 'si';
+            form.appendChild(input);
+            document.body.appendChild(form);
+            form.submit();
+          }
+        }
+      });
+    };
 </script>
 {% endblock %}
