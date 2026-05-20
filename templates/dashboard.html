@@ -102,12 +102,98 @@
 </div>
 
 <!-- Accesos rápidos -->
-<div style="display:flex;gap:12px;margin-top:16px;">
+<div style="display:flex;gap:12px;margin-top:16px;flex-wrap:wrap;">
   <a href="/inventario" class="btn btn-primary">📦 Ver Inventario</a>
   <a href="/movimientos" class="btn btn-secondary">🔄 Registrar Movimiento</a>
   {% if session.get('rol') == 'Administrador' %}
   <a href="/usuarios" class="btn btn-secondary">👥 Gestionar Usuarios</a>
   {% endif %}
+  <button class="btn btn-secondary" onclick="abrirModal('modalReporte')" style="border-color:rgba(192,57,43,0.4);color:#e88;">
+    📄 Generar Reporte PDF
+  </button>
+</div>
+
+<!-- ═══════════════════════════════════════════════ -->
+<!-- MODAL: GENERAR REPORTE PDF CON FILTROS          -->
+<!-- ═══════════════════════════════════════════════ -->
+<div class="modal-overlay" id="modalReporte">
+  <div class="modal" style="width:560px;">
+    <div class="modal-title">📄 Generar Reporte PDF</div>
+    <p style="font-size:12px;color:var(--gris-claro);margin-bottom:20px;margin-top:-16px;">
+      Filtra la información que quieres incluir en el reporte. Deja los campos vacíos para incluir todo.
+    </p>
+
+    <form action="/reporte/inventario" method="GET" target="_blank">
+
+      <!-- Rango de fechas -->
+      <div style="margin-bottom:12px;">
+        <div style="font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--gris-claro);margin-bottom:8px;">
+          📅 Rango de Fechas (Movimientos)
+        </div>
+        <div class="form-row">
+          <div class="form-group" style="margin-bottom:0;">
+            <label>Desde</label>
+            <input type="date" name="fecha_inicio">
+          </div>
+          <div class="form-group" style="margin-bottom:0;">
+            <label>Hasta</label>
+            <input type="date" name="fecha_fin">
+          </div>
+        </div>
+      </div>
+
+      <!-- Nombre de pieza -->
+      <div class="form-group">
+        <label>🔍 Nombre de Pieza</label>
+        <input type="text" name="nombre_pieza" placeholder="Ej: Pistón, Válvula... (búsqueda parcial)">
+      </div>
+
+      <!-- Categoría y Tipo de movimiento -->
+      <div class="form-row">
+        <div class="form-group">
+          <label>📂 Categoría</label>
+          <select name="id_categoria">
+            <option value="">— Todas las categorías —</option>
+            {% for c in categorias %}
+            <option value="{{ c.id_categoria }}">{{ c.nombre_categoria }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="form-group">
+          <label>🔄 Tipo de Movimiento</label>
+          <select name="tipo_movimiento">
+            <option value="">— Todos —</option>
+            <option value="ENTRADA">ENTRADA</option>
+            <option value="SALIDA">SALIDA</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Estado de stock -->
+      <div class="form-group">
+        <label>📦 Estado de Stock</label>
+        <select name="estado_stock">
+          <option value="">— Todos —</option>
+          <option value="bajo">Stock Bajo (≤ 5 unidades)</option>
+          <option value="normal">Stock Normal (> 5 unidades)</option>
+        </select>
+      </div>
+
+      <!-- Separador visual -->
+      <div style="border-top:1px solid var(--gris-borde);margin:20px 0;"></div>
+
+      <!-- Hint informativo -->
+      <div style="background:rgba(52,152,219,0.08);border:1px solid rgba(52,152,219,0.2);border-radius:3px;padding:10px 14px;font-size:12px;color:#7ec8f5;margin-bottom:4px;">
+        💡 El reporte incluirá el inventario filtrado y los movimientos que coincidan con los criterios seleccionados.
+      </div>
+
+      <div class="modal-actions">
+        <button type="button" class="btn btn-secondary" onclick="cerrarModal('modalReporte')">Cancelar</button>
+        <button type="submit" class="btn btn-primary">📄 Generar PDF</button>
+      </div>
+
+    </form>
+  </div>
 </div>
 
 {% endblock %}

@@ -117,6 +117,10 @@ def dashboard():
         LIMIT 5
     """)
     ultimos_movimientos = cur.fetchall()
+
+    # Categorías para el modal del reporte
+    cur.execute("SELECT * FROM categorias ORDER BY nombre_categoria")
+    categorias = cur.fetchall()
     
     cur.close()
     
@@ -125,7 +129,8 @@ def dashboard():
         stock_bajo=stock_bajo,
         total_movimientos=total_movimientos,
         alertas=alertas,
-        ultimos_movimientos=ultimos_movimientos
+        ultimos_movimientos=ultimos_movimientos,
+        categorias=categorias
     )
 
 # ─────────────────────────────────────────
@@ -367,7 +372,6 @@ def agregar_categoria():
 def eliminar_categoria(id):
     con = get_db()
     cur = con.cursor()
-    # Verificar que no haya piezas usando esta categoría
     cur.execute("SELECT COUNT(*) AS total FROM piezas WHERE id_categoria = %s", (id,))
     resultado = cur.fetchone()
     if resultado['total'] > 0:
@@ -417,38 +421,117 @@ def eliminar_tipo(id):
 
 
 # ─────────────────────────────────────────
-# REPORTE PDF
+# REPORTE PDF CON FILTROS
 # ─────────────────────────────────────────
 @app.route('/reporte/inventario')
 @login_required
 def reporte_inventario():
+    # ── Leer filtros del query string ──
+    fecha_inicio   = request.args.get('fecha_inicio', '').strip()
+    fecha_fin      = request.args.get('fecha_fin', '').strip()
+    nombre_pieza   = request.args.get('nombre_pieza', '').strip()
+    id_categoria   = request.args.get('id_categoria', '').strip()
+    tipo_movimiento = request.args.get('tipo_movimiento', '').strip()
+    estado_stock   = request.args.get('estado_stock', '').strip()
+
     con = get_db()
     cur = con.cursor()
-    cur.execute("""
+
+    # ── Consulta de piezas con filtros ──
+    query_piezas = """
         SELECT p.nombre_pieza, p.año, p.cantidad, p.descripcion,
-            c.nombre_categoria, t.nombre_tipo,
-            CASE WHEN p.cantidad <= 5 THEN 'STOCK BAJO' ELSE 'STOCK NORMAL' END AS estado
+               c.nombre_categoria, t.nombre_tipo,
+               CASE WHEN p.cantidad <= 5 THEN 'STOCK BAJO' ELSE 'STOCK NORMAL' END AS estado
         FROM piezas p
         JOIN categorias c ON p.id_categoria = c.id_categoria
         JOIN tipo t ON p.id_tipo = t.id_tipo
-        ORDER BY p.nombre_pieza ASC
-    """)
+        WHERE 1=1
+    """
+    params_piezas = []
+
+    if nombre_pieza:
+        query_piezas += " AND p.nombre_pieza LIKE %s"
+        params_piezas.append(f"%{nombre_pieza}%")
+
+    if id_categoria:
+        query_piezas += " AND p.id_categoria = %s"
+        params_piezas.append(id_categoria)
+
+    if estado_stock == 'bajo':
+        query_piezas += " AND p.cantidad <= 5"
+    elif estado_stock == 'normal':
+        query_piezas += " AND p.cantidad > 5"
+
+    query_piezas += " ORDER BY p.nombre_pieza ASC"
+
+    cur.execute(query_piezas, params_piezas)
     piezas = cur.fetchall()
 
-    if len(piezas) == 0:
-        cur.close()
-        flash('No hay piezas registradas para generar el reporte.', 'error')
-        return redirect(url_for('inventario'))
-
-    cur.execute("""
+    # ── Consulta de movimientos con filtros ──
+    query_movs = """
         SELECT m.fecha, m.tipo_movimiento, m.cantidad, m.proveedor, p.nombre_pieza
         FROM movimientos m
         JOIN piezas p ON m.id_pieza = p.id_pieza
-        ORDER BY m.fecha DESC
-    """)
+        WHERE 1=1
+    """
+    params_movs = []
+
+    if fecha_inicio:
+        query_movs += " AND DATE(m.fecha) >= %s"
+        params_movs.append(fecha_inicio)
+
+    if fecha_fin:
+        query_movs += " AND DATE(m.fecha) <= %s"
+        params_movs.append(fecha_fin)
+
+    if nombre_pieza:
+        query_movs += " AND p.nombre_pieza LIKE %s"
+        params_movs.append(f"%{nombre_pieza}%")
+
+    if id_categoria:
+        query_movs += " AND p.id_categoria = %s"
+        params_movs.append(id_categoria)
+
+    if tipo_movimiento:
+        query_movs += " AND m.tipo_movimiento = %s"
+        params_movs.append(tipo_movimiento)
+
+    query_movs += " ORDER BY m.fecha DESC"
+
+    cur.execute(query_movs, params_movs)
     movimientos = cur.fetchall()
+
+    # Nombre de categoría para el encabezado del reporte
+    nombre_categoria_filtro = ''
+    if id_categoria:
+        cur.execute("SELECT nombre_categoria FROM categorias WHERE id_categoria = %s", (id_categoria,))
+        cat = cur.fetchone()
+        if cat:
+            nombre_categoria_filtro = cat['nombre_categoria']
+
     cur.close()
 
+    if len(piezas) == 0 and len(movimientos) == 0:
+        flash('No se encontraron datos con los filtros seleccionados.', 'error')
+        return redirect(url_for('dashboard'))
+
+    # ── Construir resumen de filtros aplicados ──
+    filtros_aplicados = []
+    if fecha_inicio:
+        filtros_aplicados.append(f"Desde: {fecha_inicio}")
+    if fecha_fin:
+        filtros_aplicados.append(f"Hasta: {fecha_fin}")
+    if nombre_pieza:
+        filtros_aplicados.append(f"Pieza: {nombre_pieza}")
+    if nombre_categoria_filtro:
+        filtros_aplicados.append(f"Categoría: {nombre_categoria_filtro}")
+    if tipo_movimiento:
+        filtros_aplicados.append(f"Movimiento: {tipo_movimiento}")
+    if estado_stock:
+        filtros_aplicados.append(f"Stock: {'Bajo' if estado_stock == 'bajo' else 'Normal'}")
+    texto_filtros = "  |  ".join(filtros_aplicados) if filtros_aplicados else "Sin filtros aplicados (reporte completo)"
+
+    # ── Generar PDF ──
     buffer = BytesIO()
     doc = SimpleDocTemplate(buffer, pagesize=letter)
     styles = getSampleStyleSheet()
@@ -457,53 +540,62 @@ def reporte_inventario():
     # Título
     elements.append(Paragraph("Rectificaciones Rio", styles['Title']))
     elements.append(Paragraph("Reporte de Inventario y Trazabilidad", styles['Heading2']))
-    elements.append(Spacer(1, 20))
+    elements.append(Spacer(1, 6))
 
-    # Tabla inventario
-    elements.append(Paragraph("Inventario de Piezas", styles['Heading3']))
-    elements.append(Spacer(1, 10))
-    data = [['Pieza', 'Año', 'Cantidad', 'Categoría', 'Tipo', 'Estado']]
-    for p in piezas:
-        data.append([p['nombre_pieza'], str(p['año']), str(p['cantidad']),
-                    p['nombre_categoria'], p['nombre_tipo'], p['estado']])
+    # Filtros aplicados
+    elements.append(Paragraph(
+        f"<font size='8' color='grey'>Filtros: {texto_filtros}</font>",
+        styles['Normal']
+    ))
+    elements.append(Spacer(1, 16))
 
-    table = Table(data, repeatRows=1, colWidths=[150, 40, 55, 90, 80, 80])
-    table.setStyle(TableStyle([
-        ('BACKGROUND', (0,0), (-1,0), colors.HexColor('#8B0000')),
-        ('TEXTCOLOR', (0,0), (-1,0), colors.white),
-        ('FONTNAME', (0,0), (-1,0), 'Helvetica-Bold'),
-        ('FONTSIZE', (0,0), (-1,-1), 9),
-        ('ALIGN', (0,0), (-1,-1), 'CENTER'),
-        ('GRID', (0,0), (-1,-1), 0.5, colors.grey),
-        ('ROWBACKGROUNDS', (0,1), (-1,-1), [colors.white, colors.HexColor('#f5f5f5')]),
-    ]))
-    elements.append(table)
-    elements.append(Spacer(1, 30))
+    # ── Tabla inventario ──
+    if piezas:
+        elements.append(Paragraph("Inventario de Piezas", styles['Heading3']))
+        elements.append(Spacer(1, 10))
+        data = [['Pieza', 'Año', 'Cantidad', 'Categoría', 'Tipo', 'Estado']]
+        for p in piezas:
+            data.append([p['nombre_pieza'], str(p['año']), str(p['cantidad']),
+                        p['nombre_categoria'], p['nombre_tipo'], p['estado']])
 
-    # Tabla movimientos
-    elements.append(Paragraph("Registro de Movimientos y Procedencia", styles['Heading3']))
-    elements.append(Spacer(1, 10))
-    data2 = [['Fecha', 'Pieza', 'Tipo', 'Cantidad', 'Proveedor']]
-    for m in movimientos:
-        data2.append([
-            str(m['fecha']),
-            m['nombre_pieza'],
-            m['tipo_movimiento'],
-            str(m['cantidad']),
-            m['proveedor'] or 'N/A'
-        ])
+        table = Table(data, repeatRows=1, colWidths=[150, 40, 55, 90, 80, 80])
+        table.setStyle(TableStyle([
+            ('BACKGROUND', (0,0), (-1,0), colors.HexColor('#8B0000')),
+            ('TEXTCOLOR', (0,0), (-1,0), colors.white),
+            ('FONTNAME', (0,0), (-1,0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0,0), (-1,-1), 9),
+            ('ALIGN', (0,0), (-1,-1), 'CENTER'),
+            ('GRID', (0,0), (-1,-1), 0.5, colors.grey),
+            ('ROWBACKGROUNDS', (0,1), (-1,-1), [colors.white, colors.HexColor('#f5f5f5')]),
+        ]))
+        elements.append(table)
+        elements.append(Spacer(1, 30))
 
-    table2 = Table(data2, repeatRows=1, colWidths=[110, 130, 60, 60, 130])
-    table2.setStyle(TableStyle([
-        ('BACKGROUND', (0,0), (-1,0), colors.HexColor('#8B0000')),
-        ('TEXTCOLOR', (0,0), (-1,0), colors.white),
-        ('FONTNAME', (0,0), (-1,0), 'Helvetica-Bold'),
-        ('FONTSIZE', (0,0), (-1,-1), 9),
-        ('ALIGN', (0,0), (-1,-1), 'CENTER'),
-        ('GRID', (0,0), (-1,-1), 0.5, colors.grey),
-        ('ROWBACKGROUNDS', (0,1), (-1,-1), [colors.white, colors.HexColor('#f5f5f5')]),
-    ]))
-    elements.append(table2)
+    # ── Tabla movimientos ──
+    if movimientos:
+        elements.append(Paragraph("Registro de Movimientos y Procedencia", styles['Heading3']))
+        elements.append(Spacer(1, 10))
+        data2 = [['Fecha', 'Pieza', 'Tipo', 'Cantidad', 'Proveedor']]
+        for m in movimientos:
+            data2.append([
+                str(m['fecha']),
+                m['nombre_pieza'],
+                m['tipo_movimiento'],
+                str(m['cantidad']),
+                m['proveedor'] or 'N/A'
+            ])
+
+        table2 = Table(data2, repeatRows=1, colWidths=[110, 130, 60, 60, 130])
+        table2.setStyle(TableStyle([
+            ('BACKGROUND', (0,0), (-1,0), colors.HexColor('#8B0000')),
+            ('TEXTCOLOR', (0,0), (-1,0), colors.white),
+            ('FONTNAME', (0,0), (-1,0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0,0), (-1,-1), 9),
+            ('ALIGN', (0,0), (-1,-1), 'CENTER'),
+            ('GRID', (0,0), (-1,-1), 0.5, colors.grey),
+            ('ROWBACKGROUNDS', (0,1), (-1,-1), [colors.white, colors.HexColor('#f5f5f5')]),
+        ]))
+        elements.append(table2)
 
     doc.build(elements)
     buffer.seek(0)
