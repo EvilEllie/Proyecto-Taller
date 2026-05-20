@@ -250,7 +250,6 @@ def movimientos():
     cur.close()
     return render_template('movimientos.html', movimientos=movs, piezas=piezas)
 
-
 @app.route('/movimientos/registrar', methods=['POST'])
 @login_required
 def registrar_movimiento():
@@ -258,28 +257,28 @@ def registrar_movimiento():
     tipo = request.form['tipo_movimiento']
     cantidad = request.form['cantidad']
     proveedor = request.form['proveedor']
-    
-    con = get_db()
-    cur = con.cursor()
-    
+
     if tipo == 'SALIDA':
+        con = get_db()
+        cur = con.cursor()
         cur.execute("SELECT cantidad FROM piezas WHERE id_pieza = %s", (id_pieza,))
         pieza = cur.fetchone()
+        cur.close()
+        con.close()
         if pieza['cantidad'] < int(cantidad):
             flash('Stock insuficiente para registrar la salida.', 'error')
-            cur.close()
             return redirect(url_for('movimientos'))
-    
+
+    con = get_db()
+    cur = con.cursor()
     cur.execute("""
         INSERT INTO movimientos (id_pieza, tipo_movimiento, cantidad, fecha, proveedor)
         VALUES (%s, %s, %s, NOW(), %s)
     """, (id_pieza, tipo, cantidad, proveedor))
-
-    
-
     con.commit()
     cur.close()
-    
+    con.close()
+
     flash(f'Movimiento de {tipo} registrado correctamente.', 'success')
     return redirect(url_for('movimientos'))
 
