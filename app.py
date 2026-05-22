@@ -144,6 +144,7 @@ def inventario():
     cur = con.cursor()
     cur.execute("""
         SELECT p.id_pieza, p.nombre_pieza, p.año, p.cantidad, p.descripcion,
+               p.id_categoria, p.id_tipo,
                c.nombre_categoria, t.nombre_tipo,
                CASE WHEN p.cantidad <= 5 THEN 'STOCK BAJO' ELSE 'STOCK NORMAL' END AS estado_stock
         FROM piezas p
