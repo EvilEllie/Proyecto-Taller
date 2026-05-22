@@ -67,7 +67,10 @@
         {% if session.get('rol') == 'Administrador' %}
         <td>
           <div style="display:flex;gap:6px;">
-            
+            <button class="btn btn-secondary btn-sm"
+              onclick="abrirEditar({{ p.id_pieza }}, '{{ p.nombre_pieza|replace("'", "\\'") }}', {{ p.año }}, '{{ p.descripcion|replace("'", "\\'") }}', {{ p.id_categoria }}, {{ p.id_tipo }})">
+              ✏
+            </button>
             <form method="POST" action="/inventario/eliminar/{{ p.id_pieza }}"
               onsubmit="return confirm('¿Eliminar esta pieza?')">
               <button type="submit" class="btn btn-danger btn-sm">🗑</button>
@@ -106,7 +109,7 @@
         </div>
         <div class="form-group">
           <label>Cantidad Inicial</label>
-          <input type="number" name="cantidad" placeholder="0" min="0" required>
+          <input type="number" name="cantidad" placeholder="1" min="1" required>
         </div>
       </div>
       <div class="form-row">

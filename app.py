@@ -17,6 +17,7 @@ app.config.from_object(Config)
 def get_db():
     return pymysql.connect(
         host=app.config['MYSQL_HOST'],
+        port=app.config['MYSQL_PORT'],
         user=app.config['MYSQL_USER'],
         password=app.config['MYSQL_PASSWORD'],
         database=app.config['MYSQL_DB'],
@@ -576,8 +577,9 @@ def reporte_inventario():
         elements.append(Spacer(1, 10))
         data2 = [['Fecha', 'Pieza', 'Tipo', 'Cantidad', 'Proveedor']]
         for m in movimientos:
+            fecha_str = m['fecha'].strftime('%d/%m/%Y %H:%M') if m['fecha'] else 'N/A'
             data2.append([
-                str(m['fecha']),
+                fecha_str,
                 m['nombre_pieza'],
                 m['tipo_movimiento'],
                 str(m['cantidad']),

@@ -113,6 +113,25 @@
   </button>
 </div>
 
+<!-- MANUALES -->
+<div class="card" style="margin-top:20px;">
+  <div class="card-title">📚 Manuales del Sistema</div>
+  <div style="display:flex;gap:12px;flex-wrap:wrap;">
+    <a href="/static/manuales/Manual_de_usuario_administrador_rectificaciones_rio.pdf"
+       target="_blank" class="btn btn-secondary" style="border-color:rgba(52,152,219,0.4);color:#7ec8f5;">
+      👑 Manual Administrador
+    </a>
+    <a href="/static/manuales/Manual_de_usuario_empleado_rectificaciones_rio.pdf"
+       target="_blank" class="btn btn-secondary" style="border-color:rgba(39,174,96,0.4);color:#6ddc9a;">
+      👤 Manual Empleado
+    </a>
+    <a href="/static/manuales/Manual_tecnico_e_instalacion_rectificaciones_rio.pdf"
+       target="_blank" class="btn btn-secondary" style="border-color:rgba(243,156,18,0.4);color:#f5c26b;">
+      🔧 Manual Técnico e Instalación
+    </a>
+  </div>
+</div>
+
 <!-- ═══════════════════════════════════════════════ -->
 <!-- MODAL: GENERAR REPORTE PDF CON FILTROS          -->
 <!-- ═══════════════════════════════════════════════ -->
@@ -128,16 +147,20 @@
       <!-- Rango de fechas -->
       <div style="margin-bottom:12px;">
         <div style="font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--gris-claro);margin-bottom:8px;">
-          📅 Rango de Fechas (Movimientos)
+          📅 Rango de Fechas (Movimientos) <span style="color:var(--rojo);font-size:14px;">*</span>
         </div>
         <div class="form-row">
           <div class="form-group" style="margin-bottom:0;">
-            <label>Desde</label>
-            <input type="date" name="fecha_inicio">
+            <label>Desde <span style="color:var(--rojo);">*</span></label>
+            <input type="date" name="fecha_inicio" required
+              style="color:var(--blanco);background:var(--gris-medio);border:1px solid rgba(255,255,255,0.25);
+                     color-scheme:dark;">
           </div>
           <div class="form-group" style="margin-bottom:0;">
-            <label>Hasta</label>
-            <input type="date" name="fecha_fin">
+            <label>Hasta <span style="color:var(--rojo);">*</span></label>
+            <input type="date" name="fecha_fin" required
+              style="color:var(--blanco);background:var(--gris-medio);border:1px solid rgba(255,255,255,0.25);
+                     color-scheme:dark;">
           </div>
         </div>
       </div>
