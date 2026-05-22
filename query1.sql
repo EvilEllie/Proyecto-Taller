@@ -1,4 +1,5 @@
-USE inventario_taller;
+CREATE DATABASE railway;
+USE railway;
 
 -- 1. TABLAS
 
@@ -186,8 +187,15 @@ JOIN tipo t ON p.id_tipo = t.id_tipo;
 
 -- 5. USUARIO SPIDER
 
-CREATE USER 'Spider'@'%' IDENTIFIED BY 'anonimo';
-GRANT INSERT, DELETE ON inventario_taller.* TO 'Spider'@'%';
-FLUSH PRIVILEGES;
+-- CREATE USER 'Spider'@'%' IDENTIFIED BY 'anonimo';
+-- GRANT INSERT, DELETE ON inventario_taller.* TO 'Spider'@'%';
+-- FLUSH PRIVILEGES;
 
-SELECT * FROM inventario_taller.v_inventario_completo;
+-- SELECT * FROM inventario_taller.v_inventario_completo;
+
+ALTER TABLE piezas 
+ADD COLUMN fecha_registro DATETIME DEFAULT NOW(),
+ADD COLUMN usuario_registro VARCHAR(30) DEFAULT 'Sistema';
+
+ALTER TABLE movimientos 
+ADD COLUMN usuario_registro VARCHAR(30) DEFAULT 'Sistema';
