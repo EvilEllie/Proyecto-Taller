@@ -117,18 +117,22 @@
 <div class="card" style="margin-top:20px;">
   <div class="card-title">📚 Manuales del Sistema</div>
   <div style="display:flex;gap:12px;flex-wrap:wrap;">
+    {% if session.get('rol') == 'Administrador' %}
     <a href="/static/manuales/Manual_de_usuario_administrador_rectificaciones_rio.pdf"
-       target="_blank" class="btn btn-secondary" style="border-color:rgba(52,152,219,0.4);color:#7ec8f5;">
+       target="_blank" class="btn btn-secondary" style="border-color:rgba(192,57,43,0.4);color:#e88;">
       👑 Manual Administrador
     </a>
+    {% endif %}
     <a href="/static/manuales/Manual_de_usuario_empleado_rectificaciones_rio.pdf"
        target="_blank" class="btn btn-secondary" style="border-color:rgba(39,174,96,0.4);color:#6ddc9a;">
       👤 Manual Empleado
     </a>
+    {% if session.get('rol') == 'Administrador' %}
     <a href="/static/manuales/Manual_tecnico_e_instalacion_rectificaciones_rio.pdf"
        target="_blank" class="btn btn-secondary" style="border-color:rgba(243,156,18,0.4);color:#f5c26b;">
       🔧 Manual Técnico e Instalación
     </a>
+    {% endif %}
   </div>
 </div>
 
