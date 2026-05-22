@@ -181,7 +181,11 @@ def agregar_pieza():
         flash('Ya existe una pieza con ese nombre y año.', 'error')
         cur.close()
         return redirect(url_for('inventario'))
-    cur.execute("INSERT INTO piezas(nombre_pieza, año, cantidad, descripcion, id_categoria, id_tipo) VALUES (%s, %s, %s, %s, %s, %s)", (nombre, anio, cantidad, descripcion, categoria, tipo))
+    usuario_registro = session.get('usuario', 'Sistema')
+    cur.execute("""
+        INSERT INTO piezas(nombre_pieza, año, cantidad, descripcion, id_categoria, id_tipo, fecha_registro, usuario_registro)
+        VALUES (%s, %s, %s, %s, %s, %s, NOW(), %s)
+    """, (nombre, anio, cantidad, descripcion, categoria, tipo, usuario_registro))
     con.commit()
     cur.close()
     
@@ -272,9 +276,9 @@ def registrar_movimiento():
             return redirect(url_for('movimientos'))
     
     cur.execute("""
-        INSERT INTO movimientos (id_pieza, tipo_movimiento, cantidad, fecha, proveedor)
-        VALUES (%s, %s, %s, NOW(), %s)
-    """, (id_pieza, tipo, cantidad, proveedor))
+        INSERT INTO movimientos (id_pieza, tipo_movimiento, cantidad, fecha, proveedor, usuario_registro)
+        VALUES (%s, %s, %s, NOW(), %s, %s)
+    """, (id_pieza, tipo, cantidad, proveedor, session.get('usuario', 'Sistema')))
 
     if tipo == 'ENTRADA':
         cur.execute("UPDATE piezas SET cantidad = cantidad + %s WHERE id_pieza = %s", (cantidad, id_pieza))
@@ -438,39 +442,10 @@ def reporte_inventario():
     con = get_db()
     cur = con.cursor()
 
-    # ── Consulta de piezas con filtros ──
-    query_piezas = """
-        SELECT p.nombre_pieza, p.año, p.cantidad, p.descripcion,
-               c.nombre_categoria, t.nombre_tipo,
-               CASE WHEN p.cantidad <= 5 THEN 'STOCK BAJO' ELSE 'STOCK NORMAL' END AS estado
-        FROM piezas p
-        JOIN categorias c ON p.id_categoria = c.id_categoria
-        JOIN tipo t ON p.id_tipo = t.id_tipo
-        WHERE 1=1
-    """
-    params_piezas = []
-
-    if nombre_pieza:
-        query_piezas += " AND p.nombre_pieza LIKE %s"
-        params_piezas.append(f"%{nombre_pieza}%")
-
-    if id_categoria:
-        query_piezas += " AND p.id_categoria = %s"
-        params_piezas.append(id_categoria)
-
-    if estado_stock == 'bajo':
-        query_piezas += " AND p.cantidad <= 5"
-    elif estado_stock == 'normal':
-        query_piezas += " AND p.cantidad > 5"
-
-    query_piezas += " ORDER BY p.nombre_pieza ASC"
-
-    cur.execute(query_piezas, params_piezas)
-    piezas = cur.fetchall()
-
-    # ── Consulta de movimientos con filtros ──
+    # ── Movimientos con filtros (se ejecuta primero) ──
     query_movs = """
-        SELECT m.fecha, m.tipo_movimiento, m.cantidad, m.proveedor, p.nombre_pieza
+        SELECT m.fecha, m.tipo_movimiento, m.cantidad, m.proveedor,
+               m.usuario_registro, p.nombre_pieza, p.id_pieza
         FROM movimientos m
         JOIN piezas p ON m.id_pieza = p.id_pieza
         WHERE 1=1
@@ -480,29 +455,52 @@ def reporte_inventario():
     if fecha_inicio:
         query_movs += " AND DATE(m.fecha) >= %s"
         params_movs.append(fecha_inicio)
-
     if fecha_fin:
         query_movs += " AND DATE(m.fecha) <= %s"
         params_movs.append(fecha_fin)
-
     if nombre_pieza:
         query_movs += " AND p.nombre_pieza LIKE %s"
         params_movs.append(f"%{nombre_pieza}%")
-
     if id_categoria:
         query_movs += " AND p.id_categoria = %s"
         params_movs.append(id_categoria)
-
     if tipo_movimiento:
         query_movs += " AND m.tipo_movimiento = %s"
         params_movs.append(tipo_movimiento)
 
     query_movs += " ORDER BY m.fecha DESC"
-
     cur.execute(query_movs, params_movs)
     movimientos = cur.fetchall()
 
-    # Nombre de categoría para el encabezado del reporte
+    # ── Piezas: solo las que tienen movimientos en el rango de fechas ──
+    ids_piezas_con_movs = list({m['id_pieza'] for m in movimientos})
+
+    if not ids_piezas_con_movs:
+        piezas = []
+    else:
+        placeholders = ','.join(['%s'] * len(ids_piezas_con_movs))
+        query_piezas = f"""
+            SELECT p.nombre_pieza, p.año, p.cantidad, p.descripcion,
+                   p.fecha_registro, p.usuario_registro,
+                   c.nombre_categoria, t.nombre_tipo,
+                   CASE WHEN p.cantidad <= 5 THEN 'STOCK BAJO' ELSE 'STOCK NORMAL' END AS estado
+            FROM piezas p
+            JOIN categorias c ON p.id_categoria = c.id_categoria
+            JOIN tipo t ON p.id_tipo = t.id_tipo
+            WHERE p.id_pieza IN ({placeholders})
+        """
+        params_piezas = ids_piezas_con_movs[:]
+
+        if estado_stock == 'bajo':
+            query_piezas += " AND p.cantidad <= 5"
+        elif estado_stock == 'normal':
+            query_piezas += " AND p.cantidad > 5"
+
+        query_piezas += " ORDER BY p.nombre_pieza ASC"
+        cur.execute(query_piezas, params_piezas)
+        piezas = cur.fetchall()
+
+    # Nombre de categoría para el encabezado
     nombre_categoria_filtro = ''
     if id_categoria:
         cur.execute("SELECT nombre_categoria FROM categorias WHERE id_categoria = %s", (id_categoria,))
@@ -554,17 +552,21 @@ def reporte_inventario():
     if piezas:
         elements.append(Paragraph("Inventario de Piezas", styles['Heading3']))
         elements.append(Spacer(1, 10))
-        data = [['Pieza', 'Año', 'Cantidad', 'Categoría', 'Tipo', 'Estado']]
+        data = [['Pieza', 'Año', 'Cant.', 'Categoría', 'Tipo', 'Estado', 'Registrada', 'Por']]
         for p in piezas:
-            data.append([p['nombre_pieza'], str(p['año']), str(p['cantidad']),
-                        p['nombre_categoria'], p['nombre_tipo'], p['estado']])
+            fecha_reg = p['fecha_registro'].strftime('%d/%m/%Y') if p.get('fecha_registro') else 'N/A'
+            data.append([
+                p['nombre_pieza'], str(p['año']), str(p['cantidad']),
+                p['nombre_categoria'], p['nombre_tipo'], p['estado'],
+                fecha_reg, p.get('usuario_registro') or 'Sistema'
+            ])
 
-        table = Table(data, repeatRows=1, colWidths=[150, 40, 55, 90, 80, 80])
+        table = Table(data, repeatRows=1, colWidths=[110, 35, 35, 75, 55, 65, 65, 55])
         table.setStyle(TableStyle([
             ('BACKGROUND', (0,0), (-1,0), colors.HexColor('#8B0000')),
             ('TEXTCOLOR', (0,0), (-1,0), colors.white),
             ('FONTNAME', (0,0), (-1,0), 'Helvetica-Bold'),
-            ('FONTSIZE', (0,0), (-1,-1), 9),
+            ('FONTSIZE', (0,0), (-1,-1), 8),
             ('ALIGN', (0,0), (-1,-1), 'CENTER'),
             ('GRID', (0,0), (-1,-1), 0.5, colors.grey),
             ('ROWBACKGROUNDS', (0,1), (-1,-1), [colors.white, colors.HexColor('#f5f5f5')]),
@@ -576,7 +578,7 @@ def reporte_inventario():
     if movimientos:
         elements.append(Paragraph("Registro de Movimientos y Procedencia", styles['Heading3']))
         elements.append(Spacer(1, 10))
-        data2 = [['Fecha', 'Pieza', 'Tipo', 'Cantidad', 'Proveedor']]
+        data2 = [['Fecha', 'Pieza', 'Tipo', 'Cantidad', 'Proveedor', 'Registrado por']]
         for m in movimientos:
             fecha_str = m['fecha'].strftime('%d/%m/%Y %H:%M') if m['fecha'] else 'N/A'
             data2.append([
@@ -584,15 +586,16 @@ def reporte_inventario():
                 m['nombre_pieza'],
                 m['tipo_movimiento'],
                 str(m['cantidad']),
-                m['proveedor'] or 'N/A'
+                m['proveedor'] or 'N/A',
+                m.get('usuario_registro') or 'Sistema'
             ])
 
-        table2 = Table(data2, repeatRows=1, colWidths=[110, 130, 60, 60, 130])
+        table2 = Table(data2, repeatRows=1, colWidths=[90, 110, 55, 45, 100, 90])
         table2.setStyle(TableStyle([
             ('BACKGROUND', (0,0), (-1,0), colors.HexColor('#8B0000')),
             ('TEXTCOLOR', (0,0), (-1,0), colors.white),
             ('FONTNAME', (0,0), (-1,0), 'Helvetica-Bold'),
-            ('FONTSIZE', (0,0), (-1,-1), 9),
+            ('FONTSIZE', (0,0), (-1,-1), 8),
             ('ALIGN', (0,0), (-1,-1), 'CENTER'),
             ('GRID', (0,0), (-1,-1), 0.5, colors.grey),
             ('ROWBACKGROUNDS', (0,1), (-1,-1), [colors.white, colors.HexColor('#f5f5f5')]),
